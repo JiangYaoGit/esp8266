@@ -1,0 +1,781 @@
+
+#include "WlinkWifi.h"
+#include <msgpack.h>
+#include <stdio.h>
+#include <string.h>
+
+#define WLINKBUFSIZE 1024
+
+void Get_wlink_msg(char * input, int *len)
+{
+	char i = 0;
+	while (*(input + i) != '\"')
+	{
+		i++;
+	}
+	//printf("%d\n", i);
+	*len = i;
+}
+
+void Get_wlink_msg_one(char * input, int *len)
+{
+	char i = 0;
+	while (*(input + i) != ',')
+	{
+		i++;
+	}
+	//printf("%d\n", i);
+	*len = i;
+}
+void user_print(char const* buf, int len)
+{
+	size_t i = 0;
+	for (; i < len; ++i)
+		printf("%d ", 0xff & buf[i]);
+	printf("\n\n");
+}
+int Deserialize(WlinkMsg* info,char* input, int len)
+{
+	int err = -1;
+	msgpack_zone mempool;
+	msgpack_object deserialized;
+
+	char * ptr;
+	char revBuf[1024] = { 0 };
+	static char Wlink_revBuf[WLINKBUFSIZE];
+	memset(Wlink_revBuf, 0, sizeof(Wlink_revBuf));
+	/* deserialize the buffer into msgpack_object instance. */
+	/* deserialized object is valid during the msgpack_zone instance alive. */
+	msgpack_zone_init(&mempool, 2048);
+
+	if ((err = msgpack_unpack(input, len, NULL, &mempool, &deserialized)) != 2)
+	{
+		printf("%d\n", err);
+		msgpack_zone_destroy(&mempool);
+		return err;
+	}
+	else
+	{
+		int msg_len;
+		int rec_len = msgpack_object_print_buffer(revBuf, sizeof(revBuf), deserialized);
+		printf("%d\n", rec_len);
+		printf("%s\n\n", revBuf);
+
+#define sn_name "sn\"=>\""
+		ptr = strstr(revBuf, "sn");
+		info->sn = ptr + strlen(sn_name);
+		Get_wlink_msg(info->sn, &msg_len);
+		memccpy(Wlink_revBuf, info->sn, '\"', msg_len);
+		info->sn = Wlink_revBuf;
+		rec_len += msg_len + 5;
+
+#define sender_name "sender\"=>\""
+		ptr = strstr(revBuf, "sender");
+		info->sender = ptr + strlen(sender_name);
+		Get_wlink_msg(info->sender, &msg_len);
+		memccpy(Wlink_revBuf + rec_len, info->sender, '\"', msg_len);
+		info->sender = &Wlink_revBuf[rec_len];
+		rec_len += msg_len + 5;
+
+#define receiver_name "receiver\"=>\""
+		ptr = strstr(revBuf, "receiver");
+		info->receiver = ptr + strlen(receiver_name);
+		Get_wlink_msg(info->receiver, &msg_len);
+		memccpy(Wlink_revBuf + rec_len, info->receiver, '\"', msg_len);
+		info->receiver = &Wlink_revBuf[rec_len];
+		rec_len += msg_len + 5;
+
+#define uuid_name "uuid\"=>\""
+		ptr = strstr(revBuf, "uuid");
+		info->uuid = ptr + strlen(uuid_name);
+		Get_wlink_msg(info->uuid, &msg_len);
+		memccpy(Wlink_revBuf + rec_len, info->uuid, '\"', msg_len);
+		info->uuid = &Wlink_revBuf[rec_len];
+		rec_len += msg_len + 5;
+
+#define state_name "state\"=>\""
+		ptr = strstr(revBuf, "state");
+		info->state = ptr + strlen(state_name);
+		Get_wlink_msg(info->state, &msg_len);
+		memccpy(Wlink_revBuf + rec_len, info->state, '\"', msg_len);
+		info->state = &Wlink_revBuf[rec_len];
+		rec_len += msg_len + 5;
+
+#define ser_one_name "services\"=>{\""
+#define ser_name "\"=>\""
+		ptr = strstr(revBuf, "services");
+		info->ser.ser_one = ptr + strlen(ser_one_name);
+		Get_wlink_msg(info->ser.ser_one, &msg_len);
+		memccpy(Wlink_revBuf + rec_len, info->ser.ser_one, '\"', msg_len);
+		ptr = info->ser.ser_one + msg_len + strlen(ser_name);
+		info->ser.ser_one = &Wlink_revBuf[rec_len];
+		rec_len += msg_len + 5;
+
+		info->ser.ser_one_val = ptr;
+		Get_wlink_msg(info->ser.ser_one_val, &msg_len);
+		memccpy(Wlink_revBuf + rec_len, info->ser.ser_one_val, '\"', msg_len);
+		ptr = info->ser.ser_one_val + msg_len + strlen(ser_name);
+		info->ser.ser_one_val = &Wlink_revBuf[rec_len];
+		rec_len += msg_len + 5;
+
+		//ser_two
+		info->ser.ser_two = ptr;
+		Get_wlink_msg(info->ser.ser_two, &msg_len);
+		memccpy(Wlink_revBuf + rec_len, info->ser.ser_two, '\"', msg_len);
+		ptr = info->ser.ser_two + msg_len + strlen(ser_name);
+		info->ser.ser_two = &Wlink_revBuf[rec_len];
+		rec_len += msg_len + 5;
+
+		info->ser.ser_two_val = ptr;
+		Get_wlink_msg(info->ser.ser_two_val, &msg_len);
+		memccpy(Wlink_revBuf + rec_len, info->ser.ser_two_val, '\"', msg_len);
+		ptr = info->ser.ser_two_val + msg_len + strlen(ser_name);
+		info->ser.ser_two_val = &Wlink_revBuf[rec_len];
+		rec_len += msg_len + 5;
+
+		//ser_three
+		info->ser.ser_three = ptr;
+		Get_wlink_msg(info->ser.ser_three, &msg_len);
+		memccpy(Wlink_revBuf + rec_len, info->ser.ser_three, '\"', msg_len);
+		ptr = info->ser.ser_three + msg_len + strlen(ser_name);
+		info->ser.ser_three = &Wlink_revBuf[rec_len];
+		rec_len += msg_len + 5;
+
+		info->ser.ser_three_val = ptr;
+		Get_wlink_msg(info->ser.ser_three_val, &msg_len);
+		memccpy(Wlink_revBuf + rec_len, info->ser.ser_three_val, '\"', msg_len);
+		ptr = info->ser.ser_three_val + msg_len + strlen(ser_name);
+		info->ser.ser_three_val = &Wlink_revBuf[rec_len];
+		rec_len += msg_len + 5;
+
+#define behavior_name "behavior\"=>"
+		ptr = strstr(revBuf, "behavior");
+		ptr = ptr + strlen(behavior_name);
+		//info(ptr, &msg_len);
+		memccpy(Wlink_revBuf + rec_len, ptr, ',', 10);
+		info->behavior = atoi(Wlink_revBuf + rec_len);
+
+		printf("\n\n");
+	}
+
+	/* print the deserialized object. */
+	//msgpack_object_print(stdout, deserialized);
+	//printf("\n\n");
+
+	msgpack_zone_destroy(&mempool);
+	return err;
+}
+
+int Deserialize_Dev(WlinkDevMsg* info, char *WlinkDev_revBuf, int len)
+{
+	int err = -1;
+	msgpack_zone mempool;
+	msgpack_object deserialized;
+
+	char * ptr;
+	char revBuf[1024];
+	memset(revBuf, 0, sizeof(revBuf));
+	char varBuf[1024];
+	memset(varBuf, 0, sizeof(varBuf));
+
+	/* deserialize the buffer into msgpack_object instance. */
+	/* deserialized object is valid during the msgpack_zone instance alive. */
+	msgpack_zone_init(&mempool, 2048);
+
+	if ((err = msgpack_unpack(WlinkDev_revBuf, len, NULL, &mempool, &deserialized)) != 2)
+	{
+		printf("AA\n");
+		printf("%d\n", err);
+		msgpack_zone_destroy(&mempool);
+		return err;
+	}
+	else
+	{
+		
+		int msg_len;
+		int rec_len = msgpack_object_print_buffer(revBuf, sizeof(revBuf), deserialized);
+		memset(WlinkDev_revBuf, 0, sizeof(WlinkDev_revBuf));
+		printf("%d\n", rec_len);
+		printf("%s\n\n", revBuf);
+
+#define sn_name "sn\"=>\""
+		ptr = strstr(revBuf, "sn");
+		info->sn = ptr + strlen(sn_name);
+		Get_wlink_msg(info->sn, &msg_len);
+		memccpy(WlinkDev_revBuf, info->sn, '\"', msg_len);
+		info->sn = WlinkDev_revBuf;
+		rec_len += msg_len + 5;
+
+#define sender_name "sender\"=>\""
+		ptr = strstr(revBuf, "sender");
+		info->sender = ptr + strlen(sender_name);
+		Get_wlink_msg(info->sender, &msg_len);
+		memccpy(WlinkDev_revBuf + rec_len, info->sender, '\"', msg_len);
+		info->sender = &WlinkDev_revBuf[rec_len];
+		rec_len += msg_len + 5;
+
+#define receiver_name "receiver\"=>\""
+		ptr = strstr(revBuf, "receiver");
+		info->receiver = ptr + strlen(receiver_name);
+		Get_wlink_msg(info->receiver, &msg_len);
+		memccpy(WlinkDev_revBuf + rec_len, info->receiver, '\"', msg_len);
+		info->receiver = &WlinkDev_revBuf[rec_len];
+		rec_len += msg_len + 5;
+
+#define behavior_name "behavior\"=>"
+		ptr = strstr(revBuf, "behavior");
+		ptr = ptr + strlen(behavior_name);
+		memccpy(WlinkDev_revBuf + rec_len, ptr, ',', 5);
+		info->behavior = atoi(WlinkDev_revBuf + rec_len);
+		rec_len += 10;
+
+#define uuid_name "uuid\"=>\""
+		ptr = strstr(revBuf, "uuid");
+		info->uuid = ptr + strlen(uuid_name);
+		Get_wlink_msg(info->uuid, &msg_len);
+		memccpy(WlinkDev_revBuf + rec_len, info->uuid, '\"', msg_len);
+		info->uuid = &WlinkDev_revBuf[rec_len];
+		rec_len += msg_len + 5;
+
+#define endpoint_name "endpoint\"=>"
+#define svcId_name "svcId\"=>\""
+#define attrId_name "attrId\"=>\""
+#define attrValue_name "attrValue\"=>\""
+		ptr = strstr(revBuf, "endpoint");
+		ptr = ptr + strlen(endpoint_name);
+		memccpy(WlinkDev_revBuf + rec_len, ptr, ',', 5);
+		info->body_tem.endpoint = atoi(WlinkDev_revBuf + rec_len);
+		rec_len += 10;
+
+		ptr = strstr(revBuf, "svcId");
+		info->body_tem.svcId = ptr + strlen(svcId_name);
+		Get_wlink_msg(info->body_tem.svcId, &msg_len);
+		memccpy(WlinkDev_revBuf + rec_len, info->body_tem.svcId, '\"', msg_len);
+		info->body_tem.svcId = &WlinkDev_revBuf[rec_len];
+		rec_len += msg_len + 5;
+
+		ptr = strstr(revBuf, "attrId");
+		info->body_tem.attrId = ptr + strlen(attrId_name);
+		Get_wlink_msg(info->body_tem.attrId, &msg_len);
+		memccpy(WlinkDev_revBuf + rec_len, info->body_tem.attrId, '\"', msg_len);
+		info->body_tem.attrId = &WlinkDev_revBuf[rec_len];
+		rec_len += msg_len + 5;
+
+		ptr = strstr(revBuf, "attrValue");
+		info->body_tem.attrValue = ptr + strlen(attrValue_name);
+		Get_wlink_msg(info->body_tem.attrValue, &msg_len);
+		memccpy(WlinkDev_revBuf + rec_len, info->body_tem.attrValue, '\"', msg_len);
+		strcpy(varBuf, info->body_tem.attrValue + msg_len);
+		memset(revBuf,0,sizeof(revBuf));
+		strcpy(revBuf, varBuf);
+		info->body_tem.attrValue = &WlinkDev_revBuf[rec_len];
+		rec_len += msg_len + 5;
+
+		//hum
+		ptr = strstr(revBuf, "endpoint");
+		ptr = ptr + strlen(endpoint_name);
+		memccpy(WlinkDev_revBuf + rec_len, ptr, ',', 5);
+		info->body_hum.endpoint = atoi(WlinkDev_revBuf + rec_len);
+		rec_len += 10;
+
+		ptr = strstr(revBuf, "svcId");
+		info->body_hum.svcId = ptr + strlen(svcId_name);
+		Get_wlink_msg(info->body_hum.svcId, &msg_len);
+		memccpy(WlinkDev_revBuf + rec_len, info->body_hum.svcId, '\"', msg_len);
+		info->body_hum.svcId = &WlinkDev_revBuf[rec_len];
+		rec_len += msg_len + 5;
+
+		ptr = strstr(revBuf, "attrId");
+		info->body_hum.attrId = ptr + strlen(attrId_name);
+		Get_wlink_msg(info->body_hum.attrId, &msg_len);
+		memccpy(WlinkDev_revBuf + rec_len, info->body_hum.attrId, '\"', msg_len);
+		info->body_hum.attrId = &WlinkDev_revBuf[rec_len];
+		rec_len += msg_len + 5;
+
+		ptr = strstr(revBuf, "attrValue");
+		info->body_hum.attrValue = ptr + strlen(attrValue_name);
+		Get_wlink_msg(info->body_hum.attrValue, &msg_len);
+		memccpy(WlinkDev_revBuf + rec_len, info->body_hum.attrValue, '\"', msg_len);
+		strcpy(varBuf, info->body_hum.attrValue);
+		memset(revBuf, 0, sizeof(revBuf));
+		strcpy(revBuf, varBuf);
+		info->body_hum.attrValue = &WlinkDev_revBuf[rec_len];
+		rec_len += msg_len + 5;
+
+		//pm
+		ptr = strstr(revBuf, "endpoint");
+		ptr = ptr + strlen(endpoint_name);
+		memccpy(WlinkDev_revBuf + rec_len, ptr, ',', 5);
+		info->body_pm.endpoint = atoi(WlinkDev_revBuf + rec_len);
+		rec_len += 10;
+
+		ptr = strstr(revBuf, "svcId");
+		info->body_pm.svcId = ptr + strlen(svcId_name);
+		Get_wlink_msg(info->body_pm.svcId, &msg_len);
+		memccpy(WlinkDev_revBuf + rec_len, info->body_pm.svcId, '\"', msg_len);
+		info->body_pm.svcId = &WlinkDev_revBuf[rec_len];
+		rec_len += msg_len + 5;
+
+		ptr = strstr(revBuf, "attrId");
+		info->body_pm.attrId = ptr + strlen(attrId_name);
+		Get_wlink_msg(info->body_pm.attrId, &msg_len);
+		memccpy(WlinkDev_revBuf + rec_len, info->body_pm.attrId, '\"', msg_len);
+		info->body_pm.attrId = &WlinkDev_revBuf[rec_len];
+		rec_len += msg_len + 5;
+
+		ptr = strstr(revBuf, "attrValue");
+		info->body_pm.attrValue = ptr + strlen(attrValue_name);
+		Get_wlink_msg(info->body_pm.attrValue, &msg_len);
+		memccpy(WlinkDev_revBuf + rec_len, info->body_pm.attrValue, '\"', msg_len);
+		strcpy(varBuf, info->body_pm.attrValue);
+		memset(revBuf, 0, sizeof(revBuf));
+		strcpy(revBuf, varBuf);
+		info->body_pm.attrValue = &WlinkDev_revBuf[rec_len];
+		rec_len += msg_len + 5;
+
+		//for
+		ptr = strstr(revBuf, "endpoint");
+		ptr = ptr + strlen(endpoint_name);
+		memccpy(WlinkDev_revBuf + rec_len, ptr, ',', 5);
+		info->body_for.endpoint = atoi(WlinkDev_revBuf + rec_len);
+		rec_len += 10;
+
+		ptr = strstr(revBuf, "svcId");
+		info->body_for.svcId = ptr + strlen(svcId_name);
+		Get_wlink_msg(info->body_for.svcId, &msg_len);
+		memccpy(WlinkDev_revBuf + rec_len, info->body_for.svcId, '\"', msg_len);
+		info->body_for.svcId = &WlinkDev_revBuf[rec_len];
+		rec_len += msg_len + 5;
+
+		ptr = strstr(revBuf, "attrId");
+		info->body_for.attrId = ptr + strlen(attrId_name);
+		Get_wlink_msg(info->body_for.attrId, &msg_len);
+		memccpy(WlinkDev_revBuf + rec_len, info->body_for.attrId, '\"', msg_len);
+		info->body_for.attrId = &WlinkDev_revBuf[rec_len];
+		rec_len += msg_len + 5;
+
+		ptr = strstr(revBuf, "attrValue");
+		info->body_for.attrValue = ptr + strlen(attrValue_name);
+		Get_wlink_msg(info->body_for.attrValue, &msg_len);
+		memccpy(WlinkDev_revBuf + rec_len, info->body_for.attrValue, '\"', msg_len);
+		strcpy(varBuf, info->body_pm.attrValue);
+		memset(revBuf, 0, sizeof(revBuf));
+		strcpy(revBuf, varBuf);
+		info->body_for.attrValue = &WlinkDev_revBuf[rec_len];
+		rec_len += msg_len + 5;
+
+
+		printf("\n\n");
+	}
+
+	/* print the deserialized object. */
+	//msgpack_object_print(stdout, deserialized);
+	//printf("\n\n");
+
+	msgpack_zone_destroy(&mempool);
+	return err;
+}
+
+int Serialize(WlinkMsg* info, char* out, int* len) {
+	int err = -1;
+
+	msgpack_sbuffer sbuf;
+	msgpack_packer pk;
+
+	memset(out, 0, sizeof(out));
+	* len = 0;
+	/* msgpack::sbuffer is a simple buffer implementation. */
+	msgpack_sbuffer_init(&sbuf);
+
+	/* serialize values into the buffer using msgpack_sbuffer_write callback function. */
+	msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
+
+	/*six pairs key-value*/
+	if ((err = msgpack_pack_map(&pk, 6)) != 0)
+	{
+		printf("%d\n", err);
+		return err;
+	}
+	//4:key  "behavior"
+	msgpack_pack_str(&pk, strlen("behavior"));
+	msgpack_pack_str_body(&pk, "behavior", strlen("behavior"));
+	//4:value
+	msgpack_pack_int(&pk, info->behavior);
+	
+	//1:key  "sn"
+	msgpack_pack_str(&pk, strlen("sn"));
+	msgpack_pack_str_body(&pk, "sn", strlen("sn"));
+	//1:value
+	msgpack_pack_str(&pk, strlen(info->sn));
+	msgpack_pack_str_body(&pk, info->sn, strlen(info->sn));
+	//2:key  "sender"
+	msgpack_pack_str(&pk, strlen("sender"));
+	msgpack_pack_str_body(&pk, "sender", strlen("sender"));
+	//2:value 
+	msgpack_pack_str(&pk, strlen(info->sender));
+	msgpack_pack_str_body(&pk, info->sender, strlen(info->sender));
+	//3:key  "receiver"
+	msgpack_pack_str(&pk, strlen("receiver"));
+	msgpack_pack_str_body(&pk, "receiver", strlen("receiver"));
+	//3:value
+	msgpack_pack_str(&pk, strlen(info->receiver));
+	msgpack_pack_str_body(&pk, info->receiver, strlen(info->receiver));
+
+	//5:key  "uuid"
+	msgpack_pack_str(&pk, strlen("uuid"));
+	msgpack_pack_str_body(&pk, "uuid", strlen("uuid"));
+	//5:value
+	msgpack_pack_str(&pk, strlen(info->uuid));
+	msgpack_pack_str_body(&pk, info->uuid, strlen(info->uuid));
+
+	//6:key  "body"
+	msgpack_pack_str(&pk, strlen("body"));
+	msgpack_pack_str_body(&pk, "body", strlen("body"));
+	//6:value  
+	if ((err = msgpack_pack_array(&pk, 1)) != 0)
+	{
+		printf("%s\n", "serialize err");
+		return err;
+	}
+	if ((err = msgpack_pack_map(&pk, 2)) != 0)
+	{
+		printf("%s\n", "serialize err");
+		return err;
+	}
+
+	//6-1:key
+	msgpack_pack_str(&pk, strlen("state"));
+	msgpack_pack_str_body(&pk, "state", strlen("state"));
+	//6-1:value
+	msgpack_pack_str(&pk, strlen(info->state));
+	msgpack_pack_str_body(&pk, info->state, strlen(info->state));
+	//6-2:key
+	msgpack_pack_str(&pk, strlen("services"));
+	msgpack_pack_str_body(&pk, "services", strlen("services"));
+	//6-2:value
+	msgpack_pack_map(&pk, 3);
+	msgpack_pack_str(&pk, strlen(info->ser.ser_one));
+	msgpack_pack_str_body(&pk, info->ser.ser_one, strlen(info->ser.ser_one));
+	msgpack_pack_str(&pk, strlen(info->ser.ser_one_val));
+	msgpack_pack_str_body(&pk, info->ser.ser_one_val, strlen(info->ser.ser_one_val));
+
+	msgpack_pack_str(&pk, strlen(info->ser.ser_two));
+	msgpack_pack_str_body(&pk, info->ser.ser_two, strlen(info->ser.ser_two));
+	msgpack_pack_str(&pk, strlen(info->ser.ser_two_val));
+	msgpack_pack_str_body(&pk, info->ser.ser_two_val, strlen(info->ser.ser_two_val));
+
+	msgpack_pack_str(&pk, strlen(info->ser.ser_three));
+	msgpack_pack_str_body(&pk, info->ser.ser_three, strlen(info->ser.ser_three));
+	msgpack_pack_str(&pk, strlen(info->ser.ser_three_val));
+	msgpack_pack_str_body(&pk, info->ser.ser_three_val, strlen(info->ser.ser_three_val));
+
+	memcpy(out, sbuf.data, sbuf.size);
+	*len = sbuf.size;
+
+	msgpack_sbuffer_destroy(&sbuf);
+	return err;
+}
+
+
+int Serialize_Dev(WlinkDevMsg* info, char* out, int* len) {
+	int err = -1;
+
+	msgpack_sbuffer sbuf;
+	msgpack_packer pk;
+	memset(out, 0, sizeof(out));
+	*len = 0;
+	/* msgpack::sbuffer is a simple buffer implementation. */
+	msgpack_sbuffer_init(&sbuf);
+
+	/* serialize values into the buffer using msgpack_sbuffer_write callback function. */
+	msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
+
+	/*six pairs key-value*/
+	if ((err = msgpack_pack_map(&pk, 6)) != 0)
+	{
+		printf("%d\n", err);
+		return err;
+	}
+	//4:key  "behavior"
+	msgpack_pack_str(&pk, strlen("behavior"));
+	msgpack_pack_str_body(&pk, "behavior", strlen("behavior"));
+	//4:value
+	msgpack_pack_int(&pk, info->behavior);
+
+	//1:key  "sn"
+	msgpack_pack_str(&pk, strlen("sn"));
+	msgpack_pack_str_body(&pk, "sn", strlen("sn"));
+	//1:value
+	msgpack_pack_str(&pk, strlen(info->sn));
+	msgpack_pack_str_body(&pk, info->sn, strlen(info->sn));
+	//2:key  "sender"
+	msgpack_pack_str(&pk, strlen("sender"));
+	msgpack_pack_str_body(&pk, "sender", strlen("sender"));
+	//2:value 
+	msgpack_pack_str(&pk, strlen(info->sender));
+	msgpack_pack_str_body(&pk, info->sender, strlen(info->sender));
+	//3:key  "receiver"
+	msgpack_pack_str(&pk, strlen("receiver"));
+	msgpack_pack_str_body(&pk, "receiver", strlen("receiver"));
+	//3:value
+	msgpack_pack_str(&pk, strlen(info->receiver));
+	msgpack_pack_str_body(&pk, info->receiver, strlen(info->receiver));
+
+	//5:key  "uuid"
+	msgpack_pack_str(&pk, strlen("uuid"));
+	msgpack_pack_str_body(&pk, "uuid", strlen("uuid"));
+	//5:value
+	msgpack_pack_str(&pk, strlen(info->uuid));
+	msgpack_pack_str_body(&pk, info->uuid, strlen(info->uuid));
+
+	//6:key  "body"
+	msgpack_pack_str(&pk, strlen("body"));
+	msgpack_pack_str_body(&pk, "body", strlen("body"));
+	//6:value  
+	if ((err = msgpack_pack_array(&pk, 4)) != 0)
+	{
+		printf("%s\n", "serialize err");
+		return err;
+	}
+
+	//6-1:
+	msgpack_pack_map(&pk, 4);
+	msgpack_pack_str(&pk, strlen("endpoint"));
+	msgpack_pack_str_body(&pk, "endpoint", strlen("endpoint"));
+	msgpack_pack_int(&pk, info->body_tem.endpoint);
+	msgpack_pack_str(&pk, strlen("svcId"));
+	msgpack_pack_str_body(&pk, "svcId", strlen("svcId"));
+	msgpack_pack_str(&pk, strlen(info->body_tem.svcId));
+	msgpack_pack_str_body(&pk, info->body_tem.svcId, strlen(info->body_tem.svcId));
+	msgpack_pack_str(&pk, strlen("attrId"));
+	msgpack_pack_str_body(&pk, "attrId", strlen("attrId"));
+	msgpack_pack_str(&pk, strlen(info->body_tem.attrId));
+	msgpack_pack_str_body(&pk, info->body_tem.attrId, strlen(info->body_tem.attrId));
+	msgpack_pack_str(&pk, strlen("attrValue"));
+	msgpack_pack_str_body(&pk, "attrValue", strlen("attrValue"));
+	msgpack_pack_str(&pk, strlen(info->body_tem.attrValue));
+	msgpack_pack_str_body(&pk, info->body_tem.attrValue, strlen(info->body_tem.attrValue));
+
+	//6-2
+	msgpack_pack_map(&pk, 4);
+	msgpack_pack_str(&pk, strlen("endpoint"));
+	msgpack_pack_str_body(&pk, "endpoint", strlen("endpoint"));
+	msgpack_pack_int(&pk, info->body_hum.endpoint);
+	msgpack_pack_str(&pk, strlen("svcId"));
+	msgpack_pack_str_body(&pk, "svcId", strlen("svcId"));
+	msgpack_pack_str(&pk, strlen(info->body_hum.svcId));
+	msgpack_pack_str_body(&pk, info->body_hum.svcId, strlen(info->body_hum.svcId));
+	msgpack_pack_str(&pk, strlen("attrId"));
+	msgpack_pack_str_body(&pk, "attrId", strlen("attrId"));
+	msgpack_pack_str(&pk, strlen(info->body_hum.attrId));
+	msgpack_pack_str_body(&pk, info->body_hum.attrId, strlen(info->body_hum.attrId));
+	msgpack_pack_str(&pk, strlen("attrValue"));
+	msgpack_pack_str_body(&pk, "attrValue", strlen("attrValue"));
+	msgpack_pack_str(&pk, strlen(info->body_hum.attrValue));
+	msgpack_pack_str_body(&pk, info->body_hum.attrValue, strlen(info->body_hum.attrValue));
+
+	//6-3
+	msgpack_pack_map(&pk, 4);
+	msgpack_pack_str(&pk, strlen("endpoint"));
+	msgpack_pack_str_body(&pk, "endpoint", strlen("endpoint"));
+	msgpack_pack_int(&pk, info->body_pm.endpoint);
+	msgpack_pack_str(&pk, strlen("svcId"));
+	msgpack_pack_str_body(&pk, "svcId", strlen("svcId"));
+	msgpack_pack_str(&pk, strlen(info->body_pm.svcId));
+	msgpack_pack_str_body(&pk, info->body_pm.svcId, strlen(info->body_pm.svcId));
+	msgpack_pack_str(&pk, strlen("attrId"));
+	msgpack_pack_str_body(&pk, "attrId", strlen("attrId"));
+	msgpack_pack_str(&pk, strlen(info->body_pm.attrId));
+	msgpack_pack_str_body(&pk, info->body_pm.attrId, strlen(info->body_pm.attrId));
+	msgpack_pack_str(&pk, strlen("attrValue"));
+	msgpack_pack_str_body(&pk, "attrValue", strlen("attrValue"));
+	msgpack_pack_str(&pk, strlen(info->body_pm.attrValue));
+	msgpack_pack_str_body(&pk, info->body_pm.attrValue, strlen(info->body_pm.attrValue));
+
+	//6-4
+	msgpack_pack_map(&pk, 4);
+	msgpack_pack_str(&pk, strlen("endpoint"));
+	msgpack_pack_str_body(&pk, "endpoint", strlen("endpoint"));
+	msgpack_pack_int(&pk, info->body_for.endpoint);
+	msgpack_pack_str(&pk, strlen("svcId"));
+	msgpack_pack_str_body(&pk, "svcId", strlen("svcId"));
+	msgpack_pack_str(&pk, strlen(info->body_for.svcId));
+	msgpack_pack_str_body(&pk, info->body_for.svcId, strlen(info->body_for.svcId));
+	msgpack_pack_str(&pk, strlen("attrId"));
+	msgpack_pack_str_body(&pk, "attrId", strlen("attrId"));
+	msgpack_pack_str(&pk, strlen(info->body_for.attrId));
+	msgpack_pack_str_body(&pk, info->body_for.attrId, strlen(info->body_for.attrId));
+	msgpack_pack_str(&pk, strlen("attrValue"));
+	msgpack_pack_str_body(&pk, "attrValue", strlen("attrValue"));
+	msgpack_pack_str(&pk, strlen(info->body_for.attrValue));
+	msgpack_pack_str_body(&pk, info->body_for.attrValue, strlen(info->body_for.attrValue));
+
+	memcpy(out, sbuf.data, sbuf.size);
+	*len = sbuf.size;
+
+	msgpack_sbuffer_destroy(&sbuf);
+	return err;
+}
+
+void WlinkMsgInit(WlinkMsg  *info)
+{
+	info->sn = "";
+	info->sender = "";
+	info->receiver = "";
+	info->uuid = "";
+	info->state = "";
+	info->ser.ser_one = "";
+	info->ser.ser_one_val = "";
+	info->ser.ser_two = "";
+	info->ser.ser_two_val = "";
+	info->ser.ser_three = "";
+	info->ser.ser_three_val = "";
+}
+
+void WlinkMsgInit_Dev(WlinkDevMsg  *info)
+{
+	info->sn = "";
+	info->sender = "";
+	info->receiver = "";
+	info->uuid = "";
+
+	info->body_tem.svcId = "";
+	info->body_tem.attrId = "";
+	info->body_tem.attrValue = "";
+
+	info->body_hum.svcId = "";
+	info->body_hum.attrId = "";
+	info->body_hum.attrValue = "";
+
+	info->body_pm.svcId = "";
+	info->body_pm.attrId = "";
+	info->body_pm.attrValue = "";
+
+	info->body_for.svcId = "";
+	info->body_for.attrId = "";
+	info->body_for.attrValue = "";
+}
+int main() {
+#if 1
+	WlinkMsg info;
+	WlinkMsgInit(&info);
+	info.sn = "30";
+	info.sender = "600194220129";
+	info.receiver = "";
+	info.behavior = 2;
+	info.uuid = "600194220129";
+	info.state = "1";
+	info.ser.ser_one= "1";
+	info.ser.ser_one_val = "10";
+	info.ser.ser_two = "2";
+	info.ser.ser_two_val = "11";
+	info.ser.ser_three = "3";
+	info.ser.ser_three_val = "20";
+
+	char sendBuf[1024] = { 0 };
+	int len = 5;
+	/*序列化*/
+	Serialize(&info, sendBuf, &len);
+
+	/*打印要传输的十六进制数值*/
+	printf("SerializeNumber = %d\n", len);
+	user_print(sendBuf, len);
+
+	WlinkMsg rev_info;
+	/*反序列化*/
+	Deserialize(&rev_info,sendBuf, len);
+
+	printf("%s\n", rev_info.sn);
+	printf("%s\n", rev_info.sender);
+	printf("%s\n", rev_info.receiver);
+	printf("%d\n", rev_info.behavior);
+	printf("%s\n", rev_info.uuid);
+	printf("%s\n", rev_info.state);
+	printf("%s\n", rev_info.ser.ser_one);
+	printf("%s\n", rev_info.ser.ser_one_val);
+	printf("%s\n", rev_info.ser.ser_two);
+	printf("%s\n", rev_info.ser.ser_two_val);
+	printf("%s\n", rev_info.ser.ser_three);
+	printf("%s\n", rev_info.ser.ser_three_val);
+
+
+	
+	
+	WlinkDevMsg info_dev;
+	WlinkMsgInit_Dev(&info_dev);
+	info_dev.sn = "20";
+	info_dev.sender = "600194220129";
+	info_dev.receiver = "";
+	info_dev.behavior = 10;
+	info_dev.uuid = "600194220129";
+
+	info_dev.body_tem.endpoint = 1;
+	info_dev.body_tem.svcId = "10";
+	info_dev.body_tem.attrId = "1";
+	info_dev.body_tem.attrValue = "23";
+
+	info_dev.body_hum.endpoint = 1;
+	info_dev.body_hum.svcId = "10";
+	info_dev.body_hum.attrId = "2";
+	info_dev.body_hum.attrValue = "23";
+
+	info_dev.body_pm.endpoint = 2;
+	info_dev.body_pm.svcId = "11";
+	info_dev.body_pm.attrId = "2";
+	info_dev.body_pm.attrValue = "200";
+
+	info_dev.body_for.endpoint = 3;
+	info_dev.body_for.svcId = "20";
+	info_dev.body_for.attrId = "3";
+	info_dev.body_for.attrValue = "50";
+
+	char sendBuf_dev[1024] = { 0 };
+	int len_dev = 5;
+	/*序列化*/
+	Serialize_Dev(&info_dev, sendBuf_dev, &len_dev);
+
+	/*打印要传输的十六进制数值*/
+	printf("SerializeNumber = %d\n", len_dev);
+	user_print(sendBuf_dev, len_dev);
+
+
+	WlinkDevMsg info_dev_rev;
+	///*反序列化*/
+	Deserialize_Dev(&info_dev_rev, sendBuf_dev, len_dev);
+
+	printf("%s\n", info_dev_rev.sn);
+	printf("%s\n", info_dev_rev.sender);
+	printf("%s\n", info_dev_rev.receiver);
+	printf("%d\n", info_dev_rev.behavior);
+	printf("%s\n", info_dev_rev.uuid);
+
+	printf("%d\n", info_dev_rev.body_tem.endpoint);
+	printf("%s\n", info_dev_rev.body_tem.svcId);
+	printf("%s\n", info_dev_rev.body_tem.attrId);
+	printf("%s\n", info_dev_rev.body_tem.attrValue);
+
+	printf("%d\n", info_dev_rev.body_hum.endpoint);
+	printf("%s\n", info_dev_rev.body_hum.svcId);
+	printf("%s\n", info_dev_rev.body_hum.attrId);
+	printf("%s\n", info_dev_rev.body_hum.attrValue);
+
+	printf("%d\n", info_dev_rev.body_pm.endpoint);
+	printf("%s\n", info_dev_rev.body_pm.svcId);
+	printf("%s\n", info_dev_rev.body_pm.attrId);
+	printf("%s\n", info_dev_rev.body_pm.attrValue);
+
+	printf("%d\n", info_dev_rev.body_for.endpoint);
+	printf("%s\n", info_dev_rev.body_for.svcId);
+	printf("%s\n", info_dev_rev.body_for.attrId);
+	printf("%s\n", info_dev_rev.body_for.attrValue);
+
+	
+#endif
+
+	int value_t = 36;
+	char var[10];
+	itoa(value_t,var,10);
+	printf("%s\n",var);
+	return 0;
+}
+
